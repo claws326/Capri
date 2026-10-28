@@ -1,0 +1,50 @@
+{
+  "name": "capri",
+  "version": "0.1.0",
+  "description": "Capri IA (Cyberpunk)",
+  "author": "Capri",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.capri.app",
+    "productName": "Capri",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "style.css",
+      "app.js",
+      "phrases.js",
+      "mcp-client.js",
+      "mcp/**/*",
+      "skills/**/*.md",
+      "AGENT.md",
+      "fonts/**",
+      "icons/**",
+      "!icons/CheckingOnline.gif",
+      "!icons/CapriBannerGif.gif",
+      "!icons/Express*.jpg"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "icons/CapriIcon.ico"
+    },
+    "portable": {
+      "artifactName": "Capri.exe"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^26.18.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  }
+}

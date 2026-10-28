@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Capri</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="capri splashing" id="capri" aria-label="Capri">
+    <header class="capri-bar">
+      <span class="capri-title"><span class="dot"></span>ONLINE<span class="ver">//NETRUNNER</span></span>
+      <span class="capri-status" id="status">OFFLINE</span>
+      <button class="capri-fb" id="feedback" type="button" aria-pressed="false" title="Modo feedback: a Capri confere na tela se a ação deu certo (mais lento)">feedback</button>
+      <button class="capri-min" id="minimize" type="button" aria-label="Minimizar para a bandeja" title="Minimizar para a bandeja">&minus;</button>
+      <button class="capri-close" id="close" type="button" aria-label="Fechar" title="Fechar a Capri">&times;</button>
+    </header>
+
+    <section class="splash" id="splash" aria-live="polite"></section>
+
+    <section class="chat" id="chat" hidden>
+      <div class="profile">
+        <img class="avatar" id="avatar" src="icons/CapriIconIdleBlinking.gif" alt="Rosto da Capri">
+        <div class="profile-info">
+          <span class="profile-name">CAPRI</span>
+          <span class="profile-sub">edgerunner AI // neural link</span>
+        </div>
+      </div>
+      <div class="messages" id="messages" role="log" aria-live="polite"></div>
+      <div class="files" id="files" hidden></div>
+      <form class="typer" id="form" autocomplete="off">
+        <input id="file-input" type="file" multiple hidden>
+        <button type="button" id="attach" class="attach" aria-label="Adicionar arquivos" title="Adicionar arquivos">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 6.5l-8 8a2 2 0 002.8 2.8l8.2-8.2a4 4 0 10-5.7-5.7L5.5 11.6a6 6 0 108.5 8.5l6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <label for="input">&gt;</label>
+        <div class="field">
+          <input id="input" type="text" placeholder="Inject command..." maxlength="500" spellcheck="false">
+          <span class="mirror" id="mirror" aria-hidden="true"></span>
+          <span class="block-caret" id="caret" aria-hidden="true"></span>
+        </div>
+        <button type="submit" class="send" aria-label="Enviar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l18-9-6 18-3-8z"/></svg>
+        </button>
+      </form>
+    </section>
+
+    <div class="warning" id="warning" hidden role="alert">[SYSTEM WARNING: NEURAL SIGNAL LOST]</div>
+    <div class="grips" id="grips" aria-hidden="true">
+      <i data-dir="n"></i><i data-dir="s"></i><i data-dir="w"></i><i data-dir="e"></i>
+      <i data-dir="nw"></i><i data-dir="ne"></i><i data-dir="sw"></i><i data-dir="se"></i>
+    </div>
+  </main>
+
+  <div class="eyes" id="eyes" hidden title="Clique duas vezes para abrir a Capri">
+    <svg viewBox="-80 258 736 467" aria-label="Olhos da Capri">
+      <defs>
+        <clipPath id="clip-band"><rect x="0" y="358" width="576" height="307"/></clipPath>
+        <clipPath id="clip-l"><rect x="0" y="0" width="288" height="1024"/></clipPath>
+        <clipPath id="clip-r"><rect x="288" y="0" width="288" height="1024"/></clipPath>
+        <radialGradient id="glow-g">
+          <stop offset="0" stop-color="#00ff55" stop-opacity=".4"/>
+          <stop offset=".55" stop-color="#00ff55" stop-opacity=".16"/>
+          <stop offset="1" stop-color="#00ff55" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="light-g">
+          <stop offset="0" stop-color="#bfe6ff" stop-opacity=".95"/>
+          <stop offset=".25" stop-color="#3d8bff" stop-opacity=".55"/>
+          <stop offset="1" stop-color="#2060ff" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="shade-g" cx=".5" cy=".5" r=".75">
+          <stop offset=".45" stop-color="#000" stop-opacity="0"/>
+          <stop offset="1" stop-color="#000" stop-opacity=".6"/>
+        </radialGradient>
+        <linearGradient id="shade-v" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#000" stop-opacity=".35"/>
+          <stop offset=".4" stop-color="#000" stop-opacity="0"/>
+          <stop offset="1" stop-color="#000" stop-opacity=".45"/>
+        </linearGradient>
+      </defs>
+      <ellipse cx="288" cy="511" rx="368" ry="232" fill="url(#glow-g)"/>
+      <image href="icons/CapriEyes.png" x="0" y="0" width="576" height="1024"/>
+      <circle cx="105" cy="525" r="36" fill="#080517"/>
+      <circle cx="486" cy="515" r="36" fill="#080517"/>
+      <g clip-path="url(#clip-l)"><image class="pupil" id="pupil-l" href="icons/CapriPupils0.png" x="0" y="0" width="576" height="1024"/></g>
+      <g clip-path="url(#clip-r)"><image class="pupil" id="pupil-r" href="icons/CapriPupils0.png" x="0" y="0" width="576" height="1024"/></g>
+      <rect x="0" y="358" width="576" height="307" fill="url(#shade-g)"/>
+      <rect x="0" y="358" width="576" height="307" fill="url(#shade-v)"/>
+      <g clip-path="url(#clip-band)">
+      <circle class="light" id="light-l" cx="105" cy="525" r="150" fill="url(#light-g)"/>
+      <circle class="light" id="light-r" cx="486" cy="515" r="150" fill="url(#light-g)"/>
+      </g>
+    </svg>
+    <div class="bubble eyes-bubble" id="eyes-bubble" hidden></div>
+  </div>
+
+  <script src="phrases.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
