@@ -5,7 +5,7 @@ description: Opera o computador do usuário (abrir e focar programas, pesquisar 
 
 # Operação de tela (ciclo Percepção → Ação → Observação)
 
-Este guia é carregado automaticamente quando o pedido exige ferramentas de tela. As coordenadas de todas as ferramentas usam o **espaço da imagem** do `capture_screen` (tela reduzida para no máximo 1280 px de largura); o servidor já converte para pixels reais, então não faça contas de escala.
+Este guia é carregado automaticamente quando o pedido exige ferramentas de tela. As coordenadas de todas as ferramentas usam o **espaço da imagem** do `capture_screen` (tela reduzida para no máximo 1280 px de largura); o servidor já converte para pixels reais, então não faça contas de escala. Cada captura informa um `view_id`; passe-o em `mouse_click`, `scroll` e `drag` para garantir que as coordenadas pertencem à imagem mais recente (se vier "view_id obsoleto", capture de novo). Sem captura prévia, cliques são recusados.
 
 ## 1. Escolha o caminho mais curto (do mais confiável ao menos)
 

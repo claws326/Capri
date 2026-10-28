@@ -91,13 +91,17 @@ async function activeTitle() {
 const withWindow = async (msg) => text(`${msg} Janela ativa agora: "${await activeTitle()}".`);
 
 // ponteiros (clique, rolagem, arrasto) usam o espaço da ÚLTIMA imagem que o modelo viu: sem contas de zoom/recorte para ele
-let view = { x0: 0, y0: 0, zoom: 1, w: null, h: null };
-function toScreen(x, y, g) {
-  const w = view.w ?? g.vw;
-  const h = view.h ?? g.vh;
-  if (x < 0 || y < 0 || x > w || y > h) throw new Error(`coordenada (${x}, ${y}) fora da última imagem (${w}x${h}); capture a tela de novo`);
-  return { x: Math.round((view.x0 + x / view.zoom) * g.s), y: Math.round((view.y0 + y / view.zoom) * g.s) };
+// view só é gravada depois que a imagem FINAL (com as dimensões que o modelo recebe) está definida
+let view = { id: 0, x0: 0, y0: 0, zx: 1, zy: 1, w: 0, h: 0 };
+function toScreen(x, y, g, viewId) {
+  if (!view.id) throw new Error('nenhuma captura ativa: use capture_screen antes de clicar, rolar ou arrastar');
+  if (viewId !== undefined && viewId !== view.id) throw new Error(`view_id ${viewId} obsoleto (captura atual: ${view.id}); capture a tela de novo e use as coordenadas da nova imagem`);
+  if (x < 0 || y < 0 || x > view.w || y > view.h) throw new Error(`coordenada (${x}, ${y}) fora da última imagem (${view.w}x${view.h}); capture a tela de novo`);
+  const p = { x: Math.round((view.x0 + x / view.zx) * g.s), y: Math.round((view.y0 + y / view.zy) * g.s) };
+  console.error(`[POINT] view=${view.id} image=${view.w}x${view.h} offset=${view.x0},${view.y0} zoom=${view.zx.toFixed(3)},${view.zy.toFixed(3)} model=${x},${y} physical=${p.x},${p.y}`);
+  return p;
 }
+const viewIdField = z.number().int().optional().describe('view_id da imagem usada (informado por capture_screen). Se não for a captura mais recente, a ação é recusada.');
 
 const region = z.array(z.number().int()).length(4).optional();
 
@@ -127,15 +131,24 @@ server.registerTool('capture_screen', {
   const oh = Math.max(1, Math.round((rect.h / g.s) * zoom));
   const saved = shotName(save_path, 'screen.png');
   await capture(rect, ow, oh, saved);
-  view = { x0: r ? r[0] : 0, y0: r ? r[1] : 0, zoom: r ? zoom : 1, w: ow, h: oh };
   // o modelo recebe um JPEG (leve); o arquivo pedido fica salvo em disco
   const jpg = path.join(SHOTS_DIR, '_view.jpg');
-  await capture(rect, ow, oh, jpg);
-  // limite de payload: se o JPEG ficou grande demais, refaz mais leve (80% do tamanho)
-  if (fs.statSync(jpg).size > 900 * 1024) await capture(rect, Math.round(ow * 0.8), Math.round(oh * 0.8), jpg);
+  let fw = ow;
+  let fh = oh;
+  await capture(rect, fw, fh, jpg);
+  // limite de payload: se o JPEG ficou grande demais, refaz mais leve (80%) e a view acompanha a imagem final
+  if (fs.statSync(jpg).size > 900 * 1024) {
+    fw = Math.max(1, Math.round(ow * 0.8));
+    fh = Math.max(1, Math.round(oh * 0.8));
+    await capture(rect, fw, fh, jpg);
+  }
+  const rw = rect.w / g.s;
+  const rh = rect.h / g.s;
+  view = { id: view.id + 1, x0: r ? r[0] : 0, y0: r ? r[1] : 0, zx: fw / rw, zy: fh / rh, w: fw, h: fh };
+  console.error(`[CAPTURE] view=${view.id} physical=${g.pw ?? '?'}x${g.ph ?? '?'} screen=${g.vw}x${g.vh} scale=${g.s} image=${fw}x${fh}`);
   return {
     content: [
-      { type: 'text', text: r && zoom > 1 ? `Recorte ampliado ${zoom.toFixed(1)}x (${ow}x${oh}). Para clicar, use coordenadas DESTA imagem (pixels que você vê nela); o app converte para a tela. A tela inteira tem ${g.vw}x${g.vh}.` : `Imagem ${ow}x${oh}; a tela inteira tem ${g.vw}x${g.vh}. Para clicar, use coordenadas desta imagem.` },
+      { type: 'text', text: `view_id=${view.id}. ` + (r && zoom > 1 ? `Recorte ampliado ${zoom.toFixed(1)}x (${fw}x${fh}). Para clicar, use coordenadas DESTA imagem (pixels que você vê nela); o app converte para a tela. A tela inteira tem ${g.vw}x${g.vh}.` : `Imagem ${fw}x${fh}; a tela inteira tem ${g.vw}x${g.vh}. Para clicar, use coordenadas desta imagem.`) },
       { type: 'image', data: fs.readFileSync(jpg).toString('base64'), mimeType: 'image/jpeg' },
     ],
   };
@@ -187,11 +200,12 @@ server.registerTool('mouse_click', {
     y: z.number().int().describe('Posição vertical.'),
     button: z.enum(['left', 'right', 'middle']).optional().describe('Padrão: left.'),
     double_click: z.boolean().optional().describe('Padrão: false.'),
+    view_id: viewIdField,
   },
   annotations: { readOnlyHint: false, destructiveHint: true, title: 'Clicar com o mouse' },
-}, guard(async ({ x, y, button, double_click }) => {
+}, guard(async ({ x, y, button, double_click, view_id }) => {
   const g = await geometry();
-  const pt = toScreen(x, y, g);
+  const pt = toScreen(x, y, g, view_id);
   await ps(CLICK, { CAPRI_X: pt.x, CAPRI_Y: pt.y, CAPRI_BTN: button ?? 'left', CAPRI_N: double_click ? 2 : 1 });
   return withWindow(`Clique realizado em (${x}, ${y}).`);
 }));
@@ -209,13 +223,14 @@ server.registerTool('scroll', {
     notches: z.number().int().min(-30).max(30).describe('Quantidade de "cliques" da roda; positivo = para baixo.'),
     x: z.number().int().optional(),
     y: z.number().int().optional(),
+    view_id: viewIdField,
   },
   annotations: { readOnlyHint: false, title: 'Rolar a tela' },
-}, guard(async ({ notches, x, y }) => {
+}, guard(async ({ notches, x, y, view_id }) => {
   const g = await geometry();
   const env = { CAPRI_NOTCHES: -notches };
   if (x !== undefined && y !== undefined) {
-    const pt = toScreen(x, y, g);
+    const pt = toScreen(x, y, g, view_id);
     env.CAPRI_X = pt.x;
     env.CAPRI_Y = pt.y;
   }
@@ -235,12 +250,12 @@ Start-Sleep -Milliseconds 120
 
 server.registerTool('drag', {
   description: 'Arrasta com o botão esquerdo de (x1,y1) até (x2,y2), no espaço da imagem do capture_screen. Serve para mover janelas, arrastar arquivos e barras.',
-  inputSchema: { x1: z.number().int(), y1: z.number().int(), x2: z.number().int(), y2: z.number().int() },
+  inputSchema: { x1: z.number().int(), y1: z.number().int(), x2: z.number().int(), y2: z.number().int(), view_id: viewIdField },
   annotations: { readOnlyHint: false, destructiveHint: true, title: 'Arrastar e soltar' },
-}, guard(async ({ x1, y1, x2, y2 }) => {
+}, guard(async ({ x1, y1, x2, y2, view_id }) => {
   const g = await geometry();
-  const a = toScreen(x1, y1, g);
-  const b = toScreen(x2, y2, g);
+  const a = toScreen(x1, y1, g, view_id);
+  const b = toScreen(x2, y2, g, view_id);
   await ps(DRAG, { CAPRI_X1: a.x, CAPRI_Y1: a.y, CAPRI_X2: b.x, CAPRI_Y2: b.y });
   return withWindow(`Arrastado de (${x1}, ${y1}) para (${x2}, ${y2}).`);
 }));

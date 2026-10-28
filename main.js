@@ -33,7 +33,6 @@ const FEEDBACK_RULES = `* Feedback mode is ON: after every action the app shows 
 `;
 
 // Agent Skills (skills/<nome>/SKILL.md): divulgação progressiva — o corpo só entra no prompt quando as ferramentas são oferecidas
-const SKILL_CHAR_LIMIT = 6000;
 function loadSkills() {
   const out = [];
   try {
@@ -44,7 +43,7 @@ function loadSkills() {
       try { raw = fs.readFileSync(path.join(root, dir.name, 'SKILL.md'), 'utf8').replace(/\r\n/g, '\n'); } catch { continue; }
       const m = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
       const name = m?.[1].match(/^name:\s*(.+)$/m)?.[1].trim() ?? dir.name;
-      out.push({ name, body: (m ? m[2] : raw).trim().slice(0, SKILL_CHAR_LIMIT) });
+      out.push({ name, body: (m ? m[2] : raw).trim() });
     }
   } catch { /* sem skills */ }
   return out;
@@ -64,7 +63,7 @@ function buildSystemPrompt({ tools = false, feedback = false } = {}) {
 }
 
 // só oferece as ferramentas quando o pedido parece uma ação no computador ou consulta às notas
-const ACTION_HINTS = /\b(abr[aeiu]\w*|fech[aeiou]\w*|pesquis\w*|busc[aeiou]\w*|procur\w*|tela|resolu\w+|monitor\w*|janela\w*|rol[aeiu]\w*|scroll\w*|arrast\w*|p[áa]gina|print|screenshot|clic\w*|digit\w*|aperte|pressione|tecla\w*|mouse|navegador|site|url|youtube|google|spotify|opera|chrome|edge|firefox|discord|steam|bloco de notas|notepad|calculadora|programa|aplicativo|app|aberto|aberta|rodando|execut\w*|inicie|iniciar|foco|focar|veja|olhe|olhar|enxerg\w*|leia|nota|notas|anot\w*|lembr\w*|salv\w*|guard\w*|arquivo\w*|documento\w*|projeto|senha|prazo|segredo|ferramenta\w*|skill\w*|meu|minha|meus|minhas)\b/i;
+const ACTION_HINTS = /\b(abr[aeiu]\w*|fech[aeiou]\w*|pesquis\w*|busc[aeiou]\w*|procur\w*|tela|resolu\w+|monitor\w*|janela\w*|rol[aeiu]\w*|scroll\w*|arrast\w*|p[áa]gina|print|screenshot|clic\w*|digit\w*|aperte|pressione|tecla\w*|mouse|navegador|site|url|youtube|google|spotify|opera|chrome|edge|firefox|discord|steam|bloco de notas|notepad|calculadora|programa|aplicativo|app|aberto|aberta|rodando|execut\w*|inicie|iniciar|foco|focar|veja|olhe|olhar|enxerg\w*|leia|nota|notas|anot\w*|lembr\w*|salv\w*|guard\w*|arquivo\w*|documento\w*|projeto|senha|prazo|segredo|ferramenta\w*|skill\w*)\b/i;
 const wantsTools = (text) => ACTION_HINTS.test(String(text || '').normalize('NFC'));
 const SYSTEM_PROMPT = buildSystemPrompt();
 
@@ -151,12 +150,13 @@ async function verifyDone(model, request, actions, signal) {
       ],
     }),
   });
-  if (!res.ok) return { done: true, reason: '' };
+  // falha do verificador nunca é sucesso: o estado fica "não confirmado"
+  if (!res.ok) return { done: false, reason: `o verificador falhou (HTTP ${res.status})` };
   try {
     const v = JSON.parse((await res.json()).message?.content || '{}');
     return { done: v.done === true, reason: String(v.reason || '') };
   } catch {
-    return { done: true, reason: '' };
+    return { done: false, reason: 'resposta do verificador inválida' };
   }
 }
 const NUM_CTX = 8192;
